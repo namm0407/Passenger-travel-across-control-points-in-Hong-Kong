@@ -158,7 +158,7 @@ app.get('/HKPassenger/v1/aggregate/:group/:year/:month?', async (req, res) => {
       const { group, year, month } = req.params;
       
       // Input validation
-      if (!['local', 'mainland', 'others', 'all'].includes(group.toLowerCase())) {
+      if (!['local', 'mainland', 'others', 'all'].includes(group)) {
           return res.status(400).json({ error: `Cannot GET /HKPassenger/v1/aggregate/${group}/${year}${month ? '/' + month : ''}` });
       }
       if (isNaN(year) || year < 2021 || year > 2025) {
