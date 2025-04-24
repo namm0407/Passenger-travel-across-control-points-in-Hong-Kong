@@ -1,4 +1,4 @@
-//task A and B
+//Task A, B, C
 
 const express = require('express')
 const app = express();
@@ -150,6 +150,106 @@ app.get('/HKPassenger/v1/data/:year/:month/:day', async (req, res) => {
       res.status(500).json({ error: "Experiencing database error!!" });
   }
 });
+
+
+//Task C
+app.get('/HKPassenger/v1/aggregate/:group/:year/:month?', async (req, res) => {
+  try {
+      const { group, year, month } = req.params;
+      
+      // Input validation
+      if (!['local', 'mainland', 'others', 'all'].includes(group.toLowerCase())) {
+          return res.status(400).json({ error: `Cannot GET /HKPassenger/v1/aggregate/${group}/${year}${month ? '/' + month : ''}` });
+      }
+      if (isNaN(year) || year < 2021 || year > 2025) {
+          return res.status(400).json({ error: `Cannot GET /HKPassenger/v1/aggregate/${group}/${year}${month ? '/' + month : ''}` });
+      }
+      if (month && (isNaN(month) || month < 1 || month > 12)) {
+          return res.status(400).json({ error: `Cannot GET /HKPassenger/v1/aggregate/${group}/${year}/${month}` });
+      }
+
+      let matchQuery = month ? 
+          { Date: new RegExp(`^${month}/\\d{1,2}/${year}$`) } :
+          { Date: new RegExp(`^\\d{1,2}/\\d{1,2}/${year}$`) };
+
+      const records = await DayLog.find(matchQuery);
+
+      if (records.length === 0) {
+          return res.json([]);
+      }
+
+      // Get unique dates and sort them chronologically
+      const dates = [...new Set(records.map(r => r.Date))].sort((a, b) => {
+        const [aMonth, aDay, aYear] = a.split('/').map(Number);
+        const [bMonth, bDay, bYear] = b.split('/').map(Number);
+        return new Date(aYear, aMonth - 1, aDay) - new Date(bYear, bMonth - 1, bDay);
+      });
+
+      const result = [];
+
+      if (month) {
+          // Monthly aggregation (by day)
+          for (const date of dates) {
+              const arrivals = records.find(r => r.Date === date && r.Flow === 'Arrival');
+              const departures = records.find(r => r.Date === date && r.Flow === 'Departure');
+              
+              const entry = { Date: date };
+              
+              if (group.toLowerCase() === 'all') {
+                  entry.Local = (arrivals?.Local || 0) - (departures?.Local || 0);
+                  entry.Mainland = (arrivals?.Mainland || 0) - (departures?.Mainland || 0);
+                  entry.Others = (arrivals?.Others || 0) - (departures?.Others || 0);
+                  entry.Total = entry.Local + entry.Mainland + entry.Others;
+              } else {
+                  const field = group.charAt(0).toUpperCase() + group.slice(1);
+                  entry[field] = (arrivals?.[field] || 0) - (departures?.[field] || 0);
+              }
+              
+              result.push(entry);
+          }
+      } else {
+          // Yearly aggregation (by month)
+          const months = [...new Set(dates.map(d => d.split('/')[0]))].sort((a, b) => a - b);
+          
+          for (const m of months) {
+              const monthRecords = records.filter(r => r.Date.startsWith(`${m}/`));
+              let localSum = 0, mainlandSum = 0, othersSum = 0;
+              
+              for (const r of monthRecords) {
+                  const multiplier = r.Flow === 'Arrival' ? 1 : -1;
+                  localSum += (r.Local || 0) * multiplier;
+                  mainlandSum += (r.Mainland || 0) * multiplier;
+                  othersSum += (r.Others || 0) * multiplier;
+              }
+              
+              const entry = { Month: `${m}/${year}` };
+              
+              if (group.toLowerCase() === 'all') {
+                  entry.Local = localSum;
+                  entry.Mainland = mainlandSum;
+                  entry.Others = othersSum;
+                  entry.Total = localSum + mainlandSum + othersSum;
+              } else {
+                  const field = group.charAt(0).toUpperCase() + group.slice(1);
+                  entry[field] = { Local: localSum, Mainland: mainlandSum, Others: othersSum }[field];
+              }
+              
+              result.push(entry);
+          }
+      }
+
+      res.json(result);
+  } catch (err) {
+      res.status(500).json({ error: "Experiencing database error!!" });
+  }
+});
+
+// Add error handling for incorrect paths
+app.get('/HKPassenger/v1/:invalidPath*', (req, res) => {
+  const fullPath = `/HKPassenger/v1/${req.params.invalidPath}${req.params[0] || ''}`;
+  res.status(400).json({ error: `Cannot GET ${fullPath}` });
+});
+
 
 
 app.listen(8080, () => {
