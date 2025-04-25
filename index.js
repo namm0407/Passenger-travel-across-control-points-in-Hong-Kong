@@ -1,5 +1,3 @@
-//Task A, B, C
-
 const express = require('express')
 const app = express();
 
@@ -250,6 +248,67 @@ app.get('/HKPassenger/v1/:invalidPath*', (req, res) => {
   res.status(400).json({ error: `Cannot GET ${fullPath}` });
 });
 
+
+//Task D
+app.post('/HKPassenger/v1/data/', async (req, res) => {
+  try {
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return res.status(400).json({ error: 'POST request - missing data.' });
+    }
+
+    const status = {};
+    
+    for (const [dateStr, records] of Object.entries(req.body)) {
+      // Validate date
+      if (!isValidDate(dateStr)) {
+          status[dateStr] = 'Wrong date format or invalid date';
+          continue;
+      }
+
+      // Check if records exist 
+      const existing = await DayLog.find({ Date: dateStr });
+      if (existing.length > 0) {
+          status[dateStr] = "Records existed; cannot override";
+          continue;
+      }
+
+      // Validate records structure
+      if (!Array.isArray(records) || records.length !== 2 || 
+        !records.some(r => r.Flow === 'Arrival') || 
+        !records.some(r => r.Flow === 'Departure')) {
+        status[dateStr] = 'Invalid records structure';
+        continue; 
+      }
+
+      // Insert new records
+      try {
+        await Daylog.insertMany(records.map(record => ({
+            Date: dateStr,
+            Flow: record.Flow,
+            Local: record.Local,
+            Mainland: record.Mainland,
+            Others: record.Others
+        })));
+        
+        status[dateStr] = 'Added two records to the database';
+      } catch (err) {
+        console.error(`Error inserting records for ${dateStr}:`, err);
+        status[dateStr] = 'Error adding records to database';
+      }
+    }
+
+    res.json({ status });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Experiencing database error!!' });
+  }
+});
+
+
+//Task E
+app.all('*', (req, res) => {
+  res.status(400).json({ error: `Cannot ${req.method} ${req.originalUrl}` });
+});
 
 
 app.listen(8080, () => {
