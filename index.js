@@ -1,5 +1,3 @@
-//Task A, B, C
-
 const express = require('express')
 const app = express();
 
