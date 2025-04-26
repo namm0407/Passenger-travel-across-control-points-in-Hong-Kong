@@ -1,3 +1,5 @@
+//Task A, B, C
+
 const express = require('express')
 const app = express();
 
@@ -259,8 +261,10 @@ app.post('/HKPassenger/v1/data/', async (req, res) => {
     const status = {};
     
     for (const [dateStr, records] of Object.entries(req.body)) {
+      const [month, day, year] = dateStr.split('/');
+
       // Validate date
-      if (!isValidDate(dateStr)) {
+      if (!isValidDate(year, month, day)) {
           status[dateStr] = 'Wrong date format or invalid date';
           continue;
       }
@@ -281,23 +285,20 @@ app.post('/HKPassenger/v1/data/', async (req, res) => {
       }
 
       // Insert new records
-      try {
-        await Daylog.insertMany(records.map(record => ({
-            Date: dateStr,
-            Flow: record.Flow,
-            Local: record.Local,
-            Mainland: record.Mainland,
-            Others: record.Others
-        })));
-        
-        status[dateStr] = 'Added two records to the database';
-      } catch (err) {
-        console.error(`Error inserting records for ${dateStr}:`, err);
-        status[dateStr] = 'Error adding records to database';
-      }
+      const newRecords = records.map(record => ({
+        Date: dateStr,
+        Flow: record.Flow,
+        Local: record.Local,
+        Mainland: record.Mainland,
+        Others: record.Others
+      }));
+
+      await DayLog.insertMany(newRecords);
+      status[dateStr] = "Added two records to the database";
     }
 
     res.json({ status });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Experiencing database error!!' });
