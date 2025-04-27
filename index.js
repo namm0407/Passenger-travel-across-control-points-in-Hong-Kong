@@ -243,11 +243,18 @@ app.get('/HKPassenger/v1/aggregate/:group/:year/:month?', async (req, res) => {
 });
 
 // Add error handling for incorrect paths
-app.get('/HKPassenger/v1/:invalidPath*', (req, res) => {
-  const fullPath = `/HKPassenger/v1/${req.params.invalidPath}${req.params[0] || ''}`;
+app.set('strict routing', true);
+
+const router = express.Router({ strict: true });
+
+router.get('/HKPassenger/v1/:invalidPath*', (req, res) => {
+  const invalidPath = req.params.invalidPath || '';
+  const remainingPath = req.params[0] || '';
+  const fullPath = `/HKPassenger/v1/${invalidPath}${remainingPath}`;
   res.status(400).json({ error: `Cannot GET ${fullPath}` });
 });
 
+app.use('/', router);
 
 //Task D
 app.post('/HKPassenger/v1/data/', async (req, res) => {
