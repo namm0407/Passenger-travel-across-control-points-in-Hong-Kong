@@ -11,7 +11,6 @@ This project was built using these technologies:
 - Mongoose
 
 ## Feature
-
 ### Task A : monitors the database connection & terminates the program if the connection to the database is lost.
 - set up a connection to the MongoDB database using Mongoose for accessing the data
 - set up a schema and a model for accessing the “daylog” collection.
@@ -40,8 +39,8 @@ The request includes a JSON string in the message body containing a set of arriv
 - After processing all input, the program sends a JSON string reporting the status of the transaction for each input date.
 - If the POST request does not carry data, the program should send an error JSON string with the HTTP status code of 400.
 
-#### how to add data 
-Assumethe data is in newdailylog-01.json
+#### How to add data ?
+Assume the data is in newdailylog-01.json, type this in terminal: 
 curl --json @newdailylog-01.json http://localhost:8080/HKPassenger/v1/data -i
 
 ### Task E : an express routing handler to intercept all request types and paths, which are not defined in previous tasks
@@ -49,7 +48,7 @@ curl --json @newdailylog-01.json http://localhost:8080/HKPassenger/v1/data -i
 Return a JSON string with the HTTP status code of 400. 
 For example, for the request POST /HKPassenger/local/2023/10, we get the response {"error":"Cannot POST /HKPassenger/local/2023/10"}; for the request GET /HKPassenger/v1/data/, we get the response '{"error":"Cannot GET /HKPassenger/v1/data/"}.
 
-## data from
+## Data from
 https://data.gov.hk/en-data/dataset/hk-immd-set5-statistics-daily-passenger-traffic
 sourced from the Hong Kong Government Immigration Department, includes daily inbound and outbound trips since 2021, categorized by type of traveller such as Hong Kong Residents, Mainland Visitors, and Other Visitors. 
 
